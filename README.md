@@ -1,4 +1,4 @@
-I am building a crypto price prediction system that tries to forecast the next day’s closing price of altcoins using only information available up to today. 
+crypto price prediction model that tries to forecast the next day’s closing price of altcoins using only information available up to today. 
 
 For each coin:
 	•	train on 2023 data
