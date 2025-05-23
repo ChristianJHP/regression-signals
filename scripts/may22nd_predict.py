@@ -29,6 +29,20 @@ predictions = []
 for symbol in models.keys():
     print(f"\nProcessing {symbol}...")
     symbol_data = df[df['symbol'] == symbol].copy()
+    symbol_data['log_return'] = np.log(symbol_data['close'] / symbol_data['close'].shift(1))
+    symbol_data['close_lag_1'] = symbol_data['close'].shift(1)
+    symbol_data['close_lag_2'] = symbol_data['close'].shift(2)
+    symbol_data['volume_lag_1'] = symbol_data['volume'].shift(1)
+    symbol_data['rolling_volatility_7d'] = symbol_data['log_return'].rolling(window=7).std()
+
+    # ETH log return (cross-asset feature)
+    if 'ETH' in df['symbol'].unique():
+        eth_data = df[df['symbol'] == 'ETH'].copy()
+        eth_data['eth_log_return'] = np.log(eth_data['close'] / eth_data['close'].shift(1))
+        eth_returns = eth_data.set_index('timestamp')['eth_log_return']
+        symbol_data = symbol_data.set_index('timestamp')
+        symbol_data = symbol_data.join(eth_returns.rename('eth_log_return_lag1').shift(1), how='left')
+        symbol_data.reset_index(inplace=True)
     if len(symbol_data) < 30:
         print(f"Not enough data for {symbol}, skipping...")
         continue
