@@ -67,6 +67,43 @@ def add_technical_indicators(df):
     
     return df
 
+# --- Trading Signal Generation ---
+def generate_trading_signals(y_test, y_pred, threshold):
+    """
+    Generate trading signals ('BUY', 'SELL', 'HOLD') based on predicted vs actual prices.
+    A 'BUY' is signaled if predicted > actual + threshold,
+    a 'SELL' if predicted < actual - threshold,
+    otherwise 'HOLD'.
+    """
+    signals = []
+    for actual, predicted in zip(y_test, y_pred):
+        diff = predicted - actual
+        if diff > threshold:
+            signals.append('BUY')
+        elif diff < -threshold:
+            signals.append('SELL')
+        else:
+            signals.append('HOLD')
+    return signals
+
+# --- Backtest Trading Signals ---
+def backtest_signals(prices, signals):
+    """
+    Backtest a simple strategy based on predicted trading signals.
+    Assumes execution at today's close, and sells at the next day's close.
+    Returns list of daily profits and a cumulative return.
+    """
+    profits = []
+    for i in range(len(signals) - 1):  # we can't trade on the last day
+        if signals[i] == 'BUY':
+            profits.append(prices[i + 1] - prices[i])  # buy and sell next day
+        elif signals[i] == 'SELL':
+            profits.append(prices[i] - prices[i + 1])  # short sell
+        else:
+            profits.append(0)
+    profits.append(0)  # last day, no trade
+    return profits
+
 def calculate_adx(df, period=14):
     """Calculate Average Directional Index (ADX)"""
     # Calculate True Range
@@ -99,8 +136,8 @@ df = pd.read_csv("crypto_ohlcv.csv")
 df['timestamp'] = pd.to_datetime(df['timestamp'])
 
 # Filter out BTC and add more altcoins
-altcoins = ['ETH', 'BNB', 'SOL', 'AVAX', 'MATIC', 'ADA', 'INJ', 'RUNE', 'FET', 'RNDR', 'KAS', 'TWT', 'ARB']
-df = df[df['symbol'].isin(altcoins)]
+coins = ['ETH', 'BNB', 'SOL', 'AVAX', 'MATIC', 'ADA', 'INJ', 'RUNE', 'FET', 'RNDR', 'KAS', 'TWT', 'ARB', 'BPX']
+df = df[df['symbol'].isin(coins)]
 
 # Data validation
 print("Data Validation:")
@@ -246,6 +283,40 @@ for symbol in df['symbol'].unique():
         actual = y_test.iloc[idx]
         print(f"Predicted: ${pred:.2f}, Actual: ${actual:.2f}, Difference: ${abs(pred-actual):.2f}")
 
+    # --- Trading Signal Logic ---
+    signal_threshold = 2 * mae
+    trading_signals = generate_trading_signals(y_test, y_pred, signal_threshold)
+    signal_df = pd.DataFrame({
+        'timestamp': crypto_data[test_mask]['timestamp'].values,
+        'actual': y_test.values,
+        'predicted': y_pred,
+        'signal': trading_signals
+    })
+
+    # --- Backtest ---
+    profits = backtest_signals(y_test.values, trading_signals)
+    cumulative_return = np.sum(profits)
+    avg_daily_return = np.mean(profits)
+    print(f"Cumulative return for {symbol}: ${cumulative_return:.2f}")
+    print(f"Average daily return: ${avg_daily_return:.4f}")
+
+    # Save backtest results
+    signal_df['profit'] = profits
+    signal_df['cumulative_profit'] = np.cumsum(profits)
+    signal_df.to_csv(f"graphs/{symbol}_signals.csv", index=False)
+    print(f"Backtest results added to {symbol}_signals.csv")
+
+    # 5. Cumulative Profit Plot
+    plt.figure(figsize=(10, 5))
+    plt.plot(signal_df['timestamp'], signal_df['cumulative_profit'], label='Cumulative Profit', color='green')
+    plt.axhline(0, color='red', linestyle='--', linewidth=1)
+    plt.title(f'{symbol} - Backtested Cumulative Profit')
+    plt.xlabel('Date')
+    plt.ylabel('Profit ($)')
+    plt.tight_layout()
+    plt.savefig(f'graphs/{symbol}_cumulative_profit.png')
+    plt.close()
+
     # --- Visualization ---
     # 1. Predicted vs Actual
     plt.figure(figsize=(8, 5))
@@ -256,7 +327,7 @@ for symbol in df['symbol'].unique():
     plt.ylabel('Close Price')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f'{symbol}_pred_vs_actual.png')
+    plt.savefig(f'graphs/{symbol}_pred_vs_actual.png')
     plt.close()
 
     # 2. Residuals Plot
@@ -268,7 +339,7 @@ for symbol in df['symbol'].unique():
     plt.xlabel('Sample')
     plt.ylabel('Residual')
     plt.tight_layout()
-    plt.savefig(f'{symbol}_residuals.png')
+    plt.savefig(f'graphs/{symbol}_residuals.png')
     plt.close()
 
     # 3. Feature Importance Bar Chart
@@ -282,7 +353,7 @@ for symbol in df['symbol'].unique():
     plt.xlabel('Importance')
     plt.ylabel('Feature')
     plt.tight_layout()
-    plt.savefig(f'{symbol}_feature_importance.png')
+    plt.savefig(f'graphs/{symbol}_feature_importance.png')
     plt.close()
 
     # 4. Rug Pull Risk (if present)
@@ -293,7 +364,7 @@ for symbol in df['symbol'].unique():
         plt.xlabel('Index')
         plt.ylabel('Rug Pull Risk')
         plt.tight_layout()
-        plt.savefig(f'{symbol}_rug_pull_risk.png')
+        plt.savefig(f'graphs/{symbol}_rug_pull_risk.png')
         plt.close()
 
 # Create summary DataFrame
@@ -308,9 +379,30 @@ results_df = pd.DataFrame([{
     'r2': r['r2']
 } for r in results])
 
+
 print("\nSummary of all models:")
 print(results_df.to_string(index=False))
 
 # Save all models
 joblib.dump(models, 'crypto_models.joblib')
 print("\nAll models saved as 'crypto_models.joblib'")
+
+# --- Summary Visualization ---
+plt.figure(figsize=(12, 6))
+results_df_sorted = results_df.sort_values('r2', ascending=False)
+sns.barplot(x='r2', y='symbol', data=results_df_sorted, palette='coolwarm')
+plt.title('R² Score by Cryptocurrency Model')
+plt.xlabel('R² Score')
+plt.ylabel('Cryptocurrency')
+plt.tight_layout()
+plt.savefig('graphs/model_r2_scores.png')
+plt.show()
+
+plt.figure(figsize=(12, 6))
+sns.barplot(x='mae_pct', y='symbol', data=results_df_sorted, palette='magma')
+plt.title('Mean Absolute Error (% of Price) by Cryptocurrency Model')
+plt.xlabel('MAE (%)')
+plt.ylabel('Cryptocurrency')
+plt.tight_layout()
+plt.savefig('graphs/model_mae_percent.png')
+plt.show()

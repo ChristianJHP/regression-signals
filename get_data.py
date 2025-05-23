@@ -108,7 +108,8 @@ cryptos = [
     'RNDR', # Render - Retail + AI narrative = easy swing plays
     'KAS',  # Kaspa - Low cap, high signal/noise ratio
     'TWT',  # Trust Wallet - Pumps off exchange/news events
-    'ARB'   # Arbitrum - Speculative L2, very bot-active
+    'ARB',  # Arbitrum - Speculative L2, very bot-active
+    'BPX',  # Bitcoin Private - Bitcoin-like, high-risk, high-reward
 ]
 
 # Get data for all cryptocurrencies
