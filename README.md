@@ -1,4 +1,4 @@
-# Cryptocurrency Price Prediction Model
+# Price Prediction Model
 
 This repository contains machine learning models for predicting cryptocurrency prices using technical indicators and historical data.
 
