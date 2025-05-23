@@ -20,3 +20,4 @@ bottom line: it’s not magic, but it’s not random either. there’s signal he
 ![Screenshot 2025-05-22 at 5 31 05 PM](https://github.com/user-attachments/assets/e9fcca00-f2c1-476f-94e4-685e2be63891)
 ![Screenshot 2025-05-22 at 5 31 12 PM](https://github.com/user-attachments/assets/4bd65ddc-305c-4db3-9d91-ed885cf8374f)
 ![Screenshot 2025-05-22 at 5 31 34 PM](https://github.com/user-attachments/assets/065a530d-469f-4d75-90fc-101e5073746a)
+![Screenshot 2025-05-22 at 5 32 33 PM](https://github.com/user-attachments/assets/32d9787c-b68b-4126-ac41-c3b558c981e2)
