@@ -16,3 +16,7 @@ directionally, the model got the move right 60% of the time. more importantly, w
 
 bottom line: it’s not magic, but it’s not random either. there’s signal here. especially when the model is confident. that’s where this gets interesting.
 ![Screenshot 2025-05-22 at 5 27 54 PM](https://github.com/user-attachments/assets/287df09a-eb74-4e9e-8b3b-e1e39dc655c0)
+![Screenshot 2025-05-22 at 5 30 34 PM](https://github.com/user-attachments/assets/1fbc8c92-1c50-4821-8073-5f810105b0ee)
+![Screenshot 2025-05-22 at 5 31 05 PM](https://github.com/user-attachments/assets/e9fcca00-f2c1-476f-94e4-685e2be63891)
+![Screenshot 2025-05-22 at 5 31 12 PM](https://github.com/user-attachments/assets/4bd65ddc-305c-4db3-9d91-ed885cf8374f)
+![Screenshot 2025-05-22 at 5 31 34 PM](https://github.com/user-attachments/assets/065a530d-469f-4d75-90fc-101e5073746a)
