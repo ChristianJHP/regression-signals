@@ -21,3 +21,15 @@ bottom line: it’s not magic, but it’s not random either. there’s signal he
 ![Screenshot 2025-05-22 at 5 31 12 PM](https://github.com/user-attachments/assets/4bd65ddc-305c-4db3-9d91-ed885cf8374f)
 ![Screenshot 2025-05-22 at 5 31 34 PM](https://github.com/user-attachments/assets/065a530d-469f-4d75-90fc-101e5073746a)
 ![Screenshot 2025-05-22 at 5 32 33 PM](https://github.com/user-attachments/assets/32d9787c-b68b-4126-ac41-c3b558c981e2)
+
+Does this even matter?
+
+the predictions in this repo aren’t perfectly accurate in price, but they’re directionally useful. when the model says a coin’s going to move big, it’s usually right about the direction—even if the size of the move is off.
+
+so instead of just treating this like a regression problem, we treat it like a signal generator. the strategy: if the model predicts a price jump greater than 2% tomorrow, we go long. if it predicts a drop bigger than 2%, we short. anything smaller is noise and we ignore it.
+
+on may 22, 2025, the model called big upward moves for ARB, RUNE, SOL, ADA, and AVAX—all of them actually went up. it also correctly predicted a big drop for MATIC. average return on those six signals was 7.2% in one day. not bad for a dumb model with no market awareness.
+
+the key is confidence. when the model thinks something’s going to move a lot, that’s when it’s worth paying attention to. it doesn’t need to nail the price—just the direction.
+
+this whole setup mimics how you’d trade in real life: use past data only, wait for loud signals, act only when it’s confident. most models aren’t psychic, but this one’s loud enough to be useful.
