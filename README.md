@@ -1,6 +1,76 @@
-altcoin-predictor
+# Cryptocurrency Price Prediction Model
 
-This repo trains a separate Lasso or Ridge regression model per altcoin to predict the next day’s closing price using only past data. No lookahead, no cheating. Models are trained on 2023 data, tested on 2024+, and the one with the best R² after a time-based split is picked.
+This repository contains machine learning models for predicting cryptocurrency prices using technical indicators and historical data.
+
+## Directory Structure
+
+```
+.
+├── data/               # Data files
+│   └── crypto_ohlcv.csv
+├── models/            # Trained model files
+│   └── crypto_models.joblib
+├── scripts/           # Python scripts
+│   ├── get_data.py
+│   ├── regression.py
+│   ├── predict.py
+│   ├── may22nd_predict.py
+│   ├── get_historical_prices.py
+│   └── percentage_error.py
+├── graphs/            # Visualizations and predictions
+│   ├── model_r2_scores.png
+│   ├── model_mae_percent.png
+│   ├── Model_Performance_Summary.csv
+│   ├── predicted_may22_prices.csv
+│   └── [coin]_signals.csv
+└── README.md
+```
+
+## Setup
+
+1. Install required packages:
+```bash
+pip install -r requirements.txt
+```
+
+2. Download historical data:
+```bash
+python scripts/get_data.py
+```
+
+3. Train models:
+```bash
+python scripts/regression.py
+```
+
+4. Make predictions:
+```bash
+python scripts/predict.py
+```
+
+## Model Details
+
+- Uses Ridge and Lasso regression models
+- Features include technical indicators like EMA, MACD, and volume changes
+- Each cryptocurrency has its own trained model
+- Models are saved in `models/crypto_models.joblib`
+
+## Prediction Results
+
+- Latest predictions are saved in `graphs/predicted_may22_prices.csv`
+- Historical predictions and backtest results are in `graphs/[coin]_signals.csv`
+- Model performance metrics are in `graphs/Model_Performance_Summary.csv`
+
+## Visualization
+
+- Model performance visualizations are in the `graphs/` directory
+- Each coin has its own set of visualizations:
+  - Feature importance
+  - Predicted vs actual prices
+  - Residuals
+  - Cumulative profit
+
+This repo trains a separate Lasso or Ridge regression model per altcoin to predict the next day's closing price using only past data. No lookahead, no cheating. Models are trained on 2023 data, tested on 2024+, and the one with the best R² after a time-based split is picked.
 
 Features (all calculated from day t-1):
 	•	log_return: log of price ratio between previous two days
@@ -13,7 +83,7 @@ Features (all calculated from day t-1):
 Data
 	•	Sourced from Polygon.io and yfinance
 	•	Daily OHLCV up to May 21, 2025
-	•	If a coin didn’t have enough data, it got skipped
+	•	If a coin didn't have enough data, it got skipped
 
 Model Results
 	•	Average prediction error: ~4.15%
@@ -25,7 +95,7 @@ Model Results
 
 Trading Strategy
 
-This isn’t just regression—it’s a signal generator.
+This isn't just regression—it's a signal generator.
 
 The logic:
 	•	If the model predicts a >2% gain tomorrow → go long
@@ -49,7 +119,7 @@ See the full PDF writeup (report.pdf) for formulas, derivations, and performance
 
 Final Word
 
-The model isn’t psychic, but it’s not guessing either. It’s signal, not noise—especially when it’s confident. When it talks loud, listen.
+The model isn't psychic, but it's not guessing either. It's signal, not noise—especially when it's confident. When it talks loud, listen.
 
 Use this to filter noise, trade selectively, and stay mechanical.
 
