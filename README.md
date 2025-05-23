@@ -127,3 +127,35 @@ Use this to filter noise, trade selectively, and stay mechanical.
 
 Let me know if you want to plug in live data, deploy to a dashboard, or wrap it into a bot. Also let me know if you have any advice I am still refining the model and strategy
 
+Glossary
+
+Lasso Regression – A type of regression that helps with feature selection by shrinking less important feature weights to zero. It’s like telling the model “only keep the useful stuff.”
+
+Ridge Regression – Similar to Lasso, but instead of zeroing out weights, it shrinks them to small values. It’s good when you think all features might be useful, just not equally.
+
+R² Score (R-squared) – Tells you how well your model explains the variance in the actual data. 1.0 is perfect, 0.0 means it’s guessing the average, negative means it’s doing worse than that.
+
+Sharpe Ratio – A way to measure risk-adjusted returns. Higher is better. It tells you how much return you’re getting per unit of risk.
+
+Log Return – The natural log of the price ratio from one day to the next. Used because it treats gains and losses symmetrically.
+
+EMA (Exponential Moving Average) – A moving average that gives more weight to recent prices. Helps detect trends more quickly than a simple average.
+
+MACD Histogram – A technical indicator that shows momentum. Positive = bullish, negative = bearish. We use the histogram part, which is basically the “acceleration.”
+
+Daily Range % – (High - Low) / Close. Tells you how much a coin moved in a day, relative to its closing price.
+
+Volume Change – How much trading volume changed from the previous day. High volume spikes can mean big interest.
+
+Price to Support – How far the price is from its rolling support level. Helps identify whether we’re near a bounce zone.
+
+Backtest – A way to test a trading strategy using past data. If it made money in hindsight, it might have a shot live.
+
+No Lookahead Bias – Means the model only used information that would have been available at the time of prediction. No cheating with future data.
+
+Signal – When the model predicts a big enough move (e.g., >2%), we treat that as a trading signal.
+
+Long – Buying with the expectation that the asset goes up.
+
+Short – Selling (or betting against) an asset hoping its price will drop.
+
