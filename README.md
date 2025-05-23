@@ -15,3 +15,4 @@ on backtest, average prediction error across all coins was around 4.15%. some co
 directionally, the model got the move right 60% of the time. more importantly, when it predicted larger moves (over 2%), it was more likely to be correct. small changes were noisy. but when the model said something was going to move hard, it usually did — in the right direction.
 
 bottom line: it’s not magic, but it’s not random either. there’s signal here. especially when the model is confident. that’s where this gets interesting.
+![Screenshot 2025-05-22 at 5 27 54 PM](https://github.com/user-attachments/assets/287df09a-eb74-4e9e-8b3b-e1e39dc655c0)
