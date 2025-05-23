@@ -1,7 +1,12 @@
+import os
+import sys
 import pandas as pd
 
+# Get the absolute path to the project root directory
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # Load the data
-df = pd.read_csv("crypto_ohlcv.csv")
+df = pd.read_csv(os.path.join(project_root, "data", "crypto_ohlcv.csv"))
 df['timestamp'] = pd.to_datetime(df['timestamp'])
 
 # Filter data up to May 22nd
@@ -31,4 +36,4 @@ print("\nData saved to 'graphs/last_5_days_prices.csv'")
 
 # Save to CSV
 last_5_days_all = pd.concat([df[df['symbol'] == symbol].sort_values('timestamp').tail(5) for symbol in symbols])
-last_5_days_all.to_csv("graphs/last_5_days_prices.csv", index=False) 
+last_5_days_all.to_csv(os.path.join(project_root, "graphs", "last_5_days_prices.csv"), index=False) 
