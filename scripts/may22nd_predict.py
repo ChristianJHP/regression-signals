@@ -1,19 +1,24 @@
+import os
+import sys
 import pandas as pd
 import numpy as np
 import joblib
 from datetime import datetime
 from sklearn.preprocessing import StandardScaler
 
+# Get the absolute path to the project root directory
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # Load trained models
 try:
-    models = joblib.load("crypto_models.joblib")
+    models = joblib.load(os.path.join(project_root, "models", "crypto_models.joblib"))
     print("Successfully loaded models for symbols:", list(models.keys()))
 except Exception as e:
-    print(f"Error loading models: {str(e)}")
-    exit(1)
+    print(f"Error loading models: {e}")
+    sys.exit(1)
 
 # Load historical data
-df = pd.read_csv("crypto_ohlcv.csv")
+df = pd.read_csv(os.path.join(project_root, "data", "crypto_ohlcv.csv"))
 df['timestamp'] = pd.to_datetime(df['timestamp'])
 df = df[df['timestamp'] <= "2025-05-21"]
 df = df.sort_values(['symbol', 'timestamp'])
@@ -87,7 +92,7 @@ if not predictions:
 
 # Output results
 pred_df = pd.DataFrame(predictions).sort_values('predicted_change_pct', ascending=False)
-pred_df.to_csv("graphs/predicted_may22_prices.csv", index=False)
+pred_df.to_csv(os.path.join(project_root, "graphs", "predicted_may22_prices.csv"), index=False)
 
 print("\nPredictions for May 22nd:")
 print("=" * 80)
