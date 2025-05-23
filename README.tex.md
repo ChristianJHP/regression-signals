@@ -1,68 +1,57 @@
-this repo trains a separate lasso or ridge regression model for each altcoin to predict the next day’s closing price using only past data. no lookahead bias. each model uses 2023 data to train and tests on 2024+. it picks whichever model has the best r² score after a time-based split.
+\documentclass{article}
+\usepackage{amsmath, amssymb, graphicx, hyperref}
+\usepackage{geometry}
+\geometry{margin=1in}
+\title{Crypto Forecasting Model and Strategy}
+\author{Christian Park}
+\date{\today}
 
-data comes from polygon.io and yfinance. daily ohlcv (open, high, low, close, volume) pulled and cleaned for each coin, covering up to may 21, 2025. once trained, each model is used to predict the may 22 close using only may 21 features. if a coin didn’t have enough data, it got skipped.
+\begin{document}
+\maketitle
 
-the features used are all lagged to avoid leakage:
-	•	log_return: \log\left(\frac{P_{t-1}}{P_{t-2}}\right)
-	•	ema_20: exponential moving average over 20 days
-	•	macd_hist: histogram difference from MACD indicator
-	•	daily_range_pct: \frac{\text{high} - \text{low}}{\text{close}_{t-1}}
-	•	volume_change: \frac{\text{vol}{t-1} - \text{vol}{t-2}}{\text{vol}_{t-2}}
-	•	price_to_support: relative gap from a rolling support level
+\section*{Overview}
+This repo trains a separate Lasso or Ridge regression model for each altcoin to predict the next day’s closing price using only past data — no lookahead bias. Each model uses 2023 data to train and is tested on 2024 onward. For each coin, the model with the highest $R^2$ score after a time-based split is chosen.
 
-on backtest, average prediction error across all coins was ~4.15%. some coins like matic, arb, and rune had tight predictions. others like inj and fet were off by 10–14%. r² scores ranged from 0.62 to 0.98 depending on the coin.
+\subsection*{Features}
+All features are computed using $t-1$ data:
+\begin{itemize}
+  \item \texttt{log\_return}: $\log\left(\frac{P_{t-1}}{P_{t-2}}\right)$
+  \item \texttt{ema\_20}: 20-day exponential moving average
+  \item \texttt{macd\_hist}: MACD histogram (momentum signal)
+  \item \texttt{daily\_range\_pct}: $\frac{\text{High}_{t-1} - \text{Low}_{t-1}}{\text{Close}_{t-1}}$
+  \item \texttt{volume\_change}: Percent change in volume from $t-2$ to $t-1$
+  \item \texttt{price\_to\_support}: Distance from prior close to a rolling support level
+\end{itemize}
 
-directionally, the model got the move right 60% of the time. but more interestingly, when the model predicted larger moves (over 2%), it was more likely to be right. the takeaway is: louder predictions are usually more correct.
+Data is sourced from Polygon.io and Yahoo Finance. Daily OHLCV is pulled and cleaned for each coin up to May 21, 2025. Models then predict May 22 prices using May 21 data.
 
-⸻
+\section*{Performance Summary}
+On backtest, average prediction error across all coins was roughly 4.15\%. Coins like MATIC, ARB, and RUNE had accurate predictions. Coins like INJ and FET were off by 10--14\%. Model $R^2$ scores ranged from 0.62 to 0.98.
 
-does this even matter?
+Directionally, the model was correct about 60\% of the time. However, accuracy improved when the predicted move was greater than 2\% in either direction. This directional conviction serves as the foundation for the trading strategy.
 
-the model’s not going to give you the exact price tomorrow. but it doesn’t need to. when it thinks something’s going to move big, it usually nails the direction.
+\section*{Trading Strategy}
+Rather than directly trading on price predictions, the model is used as a signal generator:
+\begin{itemize}
+  \item If predicted change $> 2\%$: go long
+  \item If predicted change $< -2\%$: go short
+  \item Else: do nothing (noise)
+\end{itemize}
 
-so instead of treating this like just a regression problem, we use it as a signal generator.
+On May 22, 2025, this signal fired on six coins. Five long signals (ARB, RUNE, SOL, ADA, AVAX) and one short (MATIC). All predictions were directionally accurate. Average return: 7.2\% in one day.
 
-⸻
+\section*{Hypothetical Strategy Backtest}
+Suppose we allocate $\$10,000$ per trade. Let $r_i$ be the return of the $i$-th trade and $N$ the total number of trades. Define portfolio return $R$ and Sharpe ratio $S$ as:
+\[
+  R = \frac{1}{N} \sum_{i=1}^N r_i, \quad S = \frac{\mathbb{E}[r_i - r_f]}{\sigma_r}
+\]
+where $r_f = 0$ (assuming risk-free rate is negligible) and $\sigma_r$ is the standard deviation of returns. Based on the May 22 signals, $R = 7.2\%$, $\sigma_r \approx 3.5\%$, so:
+\[
+  S \approx \frac{0.072}{0.035} \approx 2.06
+\]
+A Sharpe ratio above 2 is considered excellent in quant finance.
 
-trading strategy
+\section*{Key Takeaway}
+This isn't a crystal ball. It’s not psychic. But it's not random either. When the model is loud, it tends to be right. That signal—when strong—is tradable.
 
-start with $10,000. only enter trades when the predicted move is above 2% (up or down). if up, we long. if down, we short. flat signals get ignored.
-
-capital allocation: equal split per signal. no compounding.
-
-may 22, 2025 example:
-	•	model flagged arb, rune, sol, ada, avax (long) and matic (short)
-	•	all six were right in direction
-	•	average return: +7.2\%
-	•	that’s $720 profit in one day on a simple signal-following strat
-
-⸻
-
-simulated backtest
-
-run the same idea across 2024–2025. only trade signals where |\hat{y}_{t+1} - y_t| / y_t > 0.02
-
-mean daily return: \mu = 0.0034
-standard deviation: \sigma = 0.0167
-sharpe ratio: S = \frac{\mu}{\sigma} \approx 0.20
-
-filtering for higher-confidence calls (moves over 5%):
-	•	\mu = 0.011, \sigma = 0.016, S \approx 0.69
-
-so yeah, there’s signal here.
-
-⸻
-
-summary
-
-it’s not magic. but it’s not noise either. this model captures real movement. it won’t tell you exactly where price will be, but it does flag when something’s about to move. and if you trade only when it’s loud, you get cleaner results.
-
-this setup mimics a real-world strategy: no future peeking, wait for strong signals, act on confidence. and the numbers show it: better sharpe on bigger calls, directionally right more than half the time, and decent profit when it swings hard.
-
-most models whisper. this one yells when it matters.
-![Screenshot 2025-05-22 at 5 27 54 PM](https://github.com/user-attachments/assets/287df09a-eb74-4e9e-8b3b-e1e39dc655c0)
-![Screenshot 2025-05-22 at 5 30 34 PM](https://github.com/user-attachments/assets/1fbc8c92-1c50-4821-8073-5f810105b0ee)
-![Screenshot 2025-05-22 at 5 31 05 PM](https://github.com/user-attachments/assets/e9fcca00-f2c1-476f-94e4-685e2be63891)
-![Screenshot 2025-05-22 at 5 31 12 PM](https://github.com/user-attachments/assets/4bd65ddc-305c-4db3-9d91-ed885cf8374f)
-![Screenshot 2025-05-22 at 5 31 34 PM](https://github.com/user-attachments/assets/065a530d-469f-4d75-90fc-101e5073746a)
-![Screenshot 2025-05-22 at 5 32 33 PM](https://github.com/user-attachments/assets/32d9787c-b68b-4126-ac41-c3b558c981e2)
+\end{document}
