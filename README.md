@@ -1,19 +1,17 @@
-crypto price prediction model that tries to forecast the next day’s closing price of altcoins using only information available up to today. 
+this repo trains a separate lasso or ridge regression model for each altcoin to predict the next day’s closing price using only past data. no lookahead bias. each model uses 2023 data to train and tests on 2024+. it picks whichever model has the best r² score after a time-based split.
 
-For each coin:
-	•	train on 2023 data
-	•	test on 2024+ data
-	•	currently using Lasso and Ridge regression to predict the closing price
-	•	then let the model pick the best alpha (regularization strength)
+the features used are all calculated from t-1:
+log_return
+ema_20
+macd_hist
+daily_range_pct
+volume_change
+price_to_support
 
-Pick best model based on R² performance.
+data comes from polygon.io and yfinance. daily ohlcv pulled and cleaned for each coin, covering up to may 21, 2025. once trained, each model is used to predict the may 22 close using only may 21 features. if a coin didn’t have enough data, it got skipped.
 
-this repo trains separate lasso or ridge regression models for each altcoin to predict the next day’s closing price using only past data. no lookahead bias. for each coin it selects whichever model has the better r² after a time-based split. the model uses features like log_return, ema_20, macd_hist, daily_range_pct, volume_change, and price_to_support — all calculated from t-1 to predict close at t.
+on backtest, average prediction error across all coins was around 4.15%. some coins like matic, arb, and rune had tight predictions. others like inj and fet were off by 10–14%. model performance ranged from ~0.62 r² up to 0.98 depending on the coin.
 
-the split is done chronologically: train on 2023, test on 2024+. once trained, each model is used to predict may 22, 2025 using may 21 data. if there wasn’t enough data for a coin, it was skipped.
+directionally, the model got the move right 60% of the time. more importantly, when it predicted larger moves (over 2%), it was more likely to be correct. small changes were noisy. but when the model said something was going to move hard, it usually did — in the right direction.
 
-performance is solid. average absolute prediction error across coins is around 4.15%. most coins land between 8-12% mae relative to price, with matic hitting 0.98 r². lowest performing coin was sol with ~0.62 r².
-
-directionally, the model got the move right 60% of the time. more interestingly, predictions with more confidence (bigger % moves) had higher directional accuracy. small predicted moves were noisy. but when the model called a strong move, it usually got the direction right.
-
-there’s signal here. the model isn’t perfect, but it’s not guessing. especially when it thinks something is going to move hard. those are the ones to pay attention to.
+bottom line: it’s not magic, but it’s not random either. there’s signal here. especially when the model is confident. that’s where this gets interesting.
