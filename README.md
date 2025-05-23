@@ -125,4 +125,5 @@ Use this to filter noise, trade selectively, and stay mechanical.
 
 ⸻
 
-Let me know if you want to plug in live data, deploy to a dashboard, or wrap it into a bot.
+Let me know if you want to plug in live data, deploy to a dashboard, or wrap it into a bot. Also let me know if you have any advice I am still refining the model and strategy
+
