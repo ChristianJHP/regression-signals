@@ -4,15 +4,23 @@ import numpy as np
 import joblib
 
 # Set target prediction date
-target_date = pd.Timestamp("2025-05-22")
+target_date = pd.Timestamp("2025-05-24")
 
 # Paths
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 model_dir = os.path.join(project_root, "models")
 price_path = os.path.join(project_root, "data", "crypto_ohlcv.csv")
 
-# Load price data
-df = pd.read_csv(price_path, parse_dates=["timestamp"])
+df = pd.read_csv(price_path, parse_dates=["timestamp"], low_memory=False)
+
+# Convert numeric columns to numeric types
+numeric_cols = ["open", "high", "low", "close", "volume"]
+for col in numeric_cols:
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+# Drop any rows with missing values in numeric columns
+df = df.dropna(subset=numeric_cols)
+
 df["symbol"] = df["symbol"].str.upper()
 symbols = df["symbol"].unique()
 
