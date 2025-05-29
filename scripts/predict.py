@@ -39,10 +39,11 @@ def load_models():
         
     return models
 
-def fetch_latest_data(symbols, days=30):
-    """Fetch latest data for given symbols."""
+def fetch_latest_data(symbols, days=30, future_days=1):
+    """Fetch latest data for given symbols and prepare for future prediction."""
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
+    future_end_date = end_date + timedelta(days=future_days)
     
     all_data = []
     failed_symbols = []
@@ -51,6 +52,7 @@ def fetch_latest_data(symbols, days=30):
         try:
             # Add -USD suffix for Yahoo Finance
             ticker = f"{symbol}-USD"
+            # Fetch historical data
             data = yf.download(ticker, start=start_date, end=end_date, interval='1d')
             
             if data.empty:
@@ -60,6 +62,24 @@ def fetch_latest_data(symbols, days=30):
                 
             # Reset index to make Date a column
             data = data.reset_index()
+            
+            # Create future dates
+            future_dates = pd.date_range(start=end_date + timedelta(days=1), 
+                                       end=future_end_date, 
+                                       freq='D')
+            
+            # Create future data frame with the same structure
+            future_data = pd.DataFrame({
+                'Date': future_dates,
+                'Open': data['Open'].iloc[-1],  # Use last known values
+                'High': data['High'].iloc[-1],
+                'Low': data['Low'].iloc[-1],
+                'Close': data['Close'].iloc[-1],
+                'Volume': data['Volume'].iloc[-1]
+            })
+            
+            # Combine historical and future data
+            data = pd.concat([data, future_data], ignore_index=True)
             
             # Rename columns to match our format
             data = data.rename(columns={
@@ -145,6 +165,8 @@ def save_predictions(predictions, data):
     signals_dir = os.path.join(project_root, 'data', 'signals')
     os.makedirs(signals_dir, exist_ok=True)
     
+    current_date = datetime.now()
+    
     for symbol, probs in predictions.items():
         # Get the corresponding data
         symbol_data = data[data['symbol'] == symbol].copy()
@@ -157,13 +179,25 @@ def save_predictions(predictions, data):
             'timestamp': symbol_data['timestamp'],
             'symbol': symbol,
             'close': symbol_data['close'],
-            'pump_probability': probs
+            'pump_probability': probs,
+            'is_future_prediction': symbol_data['timestamp'] > current_date
         })
+        
+        # Sort by timestamp
+        pred_df = pred_df.sort_values('timestamp')
         
         # Save to CSV
         output_file = os.path.join(signals_dir, f'{symbol}_predictions.csv')
         pred_df.to_csv(output_file, index=False)
         print(f"Saved predictions for {symbol} to {output_file}")
+        
+        # Print future predictions
+        future_preds = pred_df[pred_df['is_future_prediction']]
+        if not future_preds.empty:
+            print(f"\nFuture predictions for {symbol}:")
+            for _, row in future_preds.iterrows():
+                print(f"Date: {row['timestamp'].strftime('%Y-%m-%d')}, "
+                      f"Pump Probability: {row['pump_probability']:.2%}")
 
 def main():
     # Load models
@@ -173,8 +207,8 @@ def main():
         
     print(f"Loaded models for symbols: {list(models.keys())}")
     
-    # Fetch latest data
-    data, failed_symbols = fetch_latest_data(list(models.keys()))
+    # Fetch latest data including tomorrow's prediction
+    data, failed_symbols = fetch_latest_data(list(models.keys()), days=30, future_days=1)
     if data is None:
         print("No valid data available to make predictions, exiting.")
         return

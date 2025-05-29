@@ -5,7 +5,7 @@ import time
 
 API_KEY = "A5gXYy_wbQjAnVDmIfHpoy9VlD1q9AAx"
 
-def get_crypto_data(symbol, from_date="2023-01-01", to_date="2025-05-21", timespan="day"):
+def get_crypto_data(symbol, from_date="2023-01-01", to_date="2025-05-25", timespan="day"):
     """
     Fetch cryptocurrency data with better error handling and validation
     """

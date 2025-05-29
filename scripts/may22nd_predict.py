@@ -1,106 +1,94 @@
 import os
-import sys
 import pandas as pd
 import numpy as np
 import joblib
-from datetime import datetime
-from sklearn.preprocessing import StandardScaler
 
-# Get the absolute path to the project root directory
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Set target prediction date
+target_date = pd.Timestamp("2025-05-24")
 
-# Load trained models
-try:
-    models = joblib.load(os.path.join(project_root, "models", "crypto_models.joblib"))
-    print("Successfully loaded models for symbols:", list(models.keys()))
-except Exception as e:
-    print(f"Error loading models: {e}")
-    sys.exit(1)
+# Paths
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+model_dir = os.path.join(project_root, "models")
+price_path = os.path.join(project_root, "data", "crypto_ohlcv.csv")
 
-# Load historical data
-df = pd.read_csv(os.path.join(project_root, "data", "crypto_ohlcv.csv"))
-df['timestamp'] = pd.to_datetime(df['timestamp'])
-df = df[df['timestamp'] <= "2025-05-21"]
-df = df.sort_values(['symbol', 'timestamp'])
+df = pd.read_csv(price_path, parse_dates=["timestamp"], low_memory=False)
 
-# Store predictions
+# Convert numeric columns to numeric types
+numeric_cols = ["open", "high", "low", "close", "volume"]
+for col in numeric_cols:
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+# Drop any rows with missing values in numeric columns
+df = df.dropna(subset=numeric_cols)
+
+df["symbol"] = df["symbol"].str.upper()
+symbols = df["symbol"].unique()
+
+# Results
 predictions = []
 
-for symbol in models.keys():
-    print(f"\nProcessing {symbol}...")
-    symbol_data = df[df['symbol'] == symbol].copy()
-    if len(symbol_data) < 30:
-        print(f"Not enough data for {symbol}, skipping...")
+for symbol in symbols:
+    print(f"Processing {symbol}...")
+    
+    model_path = os.path.join(model_dir, f"{symbol}_classifier.joblib")
+    if not os.path.exists(model_path):
+        print(f"Classifier for {symbol} not found. Skipping.")
         continue
-
-    # Compute features
-    def calc_ema(data, span):
-        alpha = 2 / (span + 1)
-        ema = [data.iloc[0]]
-        for i in range(1, len(data)):
-            ema.append(alpha * data.iloc[i] + (1 - alpha) * ema[i-1])
-        return pd.Series(ema, index=data.index)
-
-    symbol_data['log_return'] = np.log(symbol_data['close'] / symbol_data['close'].shift(1))
-    symbol_data['ema_20'] = calc_ema(symbol_data['close'], 20).shift(1)
-    exp1 = symbol_data['close'].ewm(span=12, adjust=False).mean().shift(1)
-    exp2 = symbol_data['close'].ewm(span=26, adjust=False).mean().shift(1)
-    symbol_data['macd'] = exp1 - exp2
-    symbol_data['macd_signal'] = symbol_data['macd'].ewm(span=9, adjust=False).mean().shift(1)
-    symbol_data['macd_hist'] = symbol_data['macd'] - symbol_data['macd_signal']
-    symbol_data['daily_range_pct'] = (symbol_data['high'].shift(1) - symbol_data['low'].shift(1)) / symbol_data['close'].shift(1)
-    symbol_data['volume_change'] = symbol_data['volume'].pct_change().shift(1)
-    symbol_data['support_level'] = symbol_data['low'].rolling(20).min().shift(1)
-    symbol_data['price_to_support'] = symbol_data['close'].shift(1) / symbol_data['support_level']
-    symbol_data.dropna(inplace=True)
-
-    if symbol_data.empty:
-        print(f"No valid data after feature calculation for {symbol}, skipping...")
-        continue
-
+        
     try:
-        # Get the last row of features
-        feature_columns = models[symbol]['feature_columns']
-        X = symbol_data[feature_columns].iloc[-1:]
-        
-        # Scale features using the saved scaler
-        scaler = models[symbol]['scaler']
-        X_scaled = scaler.transform(X)
-        
-        # Make prediction
-        model = models[symbol]['model']
-        predicted = model.predict(X_scaled)[0]
-        latest_price = symbol_data['close'].iloc[-1]
-        last_timestamp = symbol_data['timestamp'].iloc[-1]
+        model = joblib.load(model_path)
+        df_symbol = df[df["symbol"] == symbol].copy()
+        df_symbol.set_index("timestamp", inplace=True)
+        df_symbol.sort_index(inplace=True)
 
-        predictions.append({
-            'symbol': symbol,
-            'as_of': last_timestamp,
-            'predicted_price_for_may22': predicted,
-            'actual_price_may21': latest_price,
-            'predicted_change_pct': 100 * (predicted - latest_price) / latest_price,
-            'model_type': models[symbol]['model_type']
-        })
-        print(f"Successfully generated prediction for {symbol}")
+        # Generate required features
+        df_symbol["close_lag_1"] = df_symbol["close"].shift(1)
+        df_symbol["close_lag_2"] = df_symbol["close"].shift(2)
+        df_symbol["volume_lag_1"] = df_symbol["volume"].shift(1)
+        df_symbol["log_return"] = (df_symbol["close"] / df_symbol["close"].shift(1)).apply(lambda x: np.log(x) if x > 0 else 0)
+        df_symbol["rolling_volatility_7d"] = df_symbol["log_return"].rolling(window=42).std()
+        df_symbol["ema_20"] = df_symbol["close"].ewm(span=20, adjust=False).mean()
+        df_symbol["macd_hist"] = (
+            df_symbol["close"].ewm(span=12, adjust=False).mean() -
+            df_symbol["close"].ewm(span=26, adjust=False).mean()
+        )
+        df_symbol["daily_range_pct"] = (df_symbol["high"] - df_symbol["low"]) / df_symbol["low"]
+        df_symbol["price_to_support"] = df_symbol["close"] / df_symbol["low"].rolling(window=14).min()
+
+        # Join ETH log return
+        eth = df[df["symbol"] == "ETH"].copy()
+        eth.set_index("timestamp", inplace=True)
+        eth["log_return"] = (eth["close"] / eth["close"].shift(1)).apply(lambda x: np.log(x) if x > 0 else 0)
+        eth["eth_log_return_lag1"] = eth["log_return"].shift(1)
+
+        df_symbol = df_symbol.join(eth[["eth_log_return_lag1"]], how="left")
+
+        # Get the most recent data point and use it for May 22nd prediction
+        latest_data = df_symbol.iloc[-1:].copy()
+        if latest_data.empty:
+            print(f"No data available for {symbol}")
+            continue
+
+        feature_cols = [
+            "close_lag_1", "close_lag_2", "volume_lag_1", "rolling_volatility_7d",
+            "eth_log_return_lag1", "ema_20", "macd_hist", "daily_range_pct", "price_to_support"
+        ]
+
+        if not all(col in latest_data.columns for col in feature_cols):
+            print(f"Missing one or more required features for {symbol}. Skipping.")
+            continue
+
+        X = latest_data[feature_cols].values.reshape(1, -1)
+        pred = model.predict(X)[0]
+        prob = model.predict_proba(X)[0][1]  # Probability of class 1
+        label = "PUMP" if pred == 1 else "NO PUMP"
+
+        print(f"{symbol}: {label} (Confidence: {prob:.2%})")
+        predictions.append((symbol, label, prob))
+
     except Exception as e:
-        print(f"Error generating prediction for {symbol}: {str(e)}")
-        continue
+        print(f"Error generating prediction for {symbol}: {e}")
 
-if not predictions:
-    print("No predictions were generated. Check the data and models.")
-    exit(1)
-
-# Output results
-pred_df = pd.DataFrame(predictions).sort_values('predicted_change_pct', ascending=False)
-pred_df.to_csv(os.path.join(project_root, "graphs", "predicted_may22_prices.csv"), index=False)
-
-print("\nPredictions for May 22nd:")
-print("=" * 80)
-for _, row in pred_df.iterrows():
-    print(f"\n{row['symbol']}:")
-    print(f"Current Price (May 21): ${row['actual_price_may21']:.2f}")
-    print(f"Predicted Price (May 22): ${row['predicted_price_for_may22']:.2f}")
-    print(f"Predicted Change: {row['predicted_change_pct']:.2f}%")
-    print(f"Model Type: {row['model_type']}")
-print("=" * 80)
-print("\nPredictions saved to 'graphs/predicted_may22_prices.csv'")
+print("\nFinal predictions for May 22nd:")
+for sym, pred, prob in sorted(predictions, key=lambda x: x[2], reverse=True):  # Sort by confidence
+    print(f"{sym}: {pred} (Confidence: {prob:.2%})")
